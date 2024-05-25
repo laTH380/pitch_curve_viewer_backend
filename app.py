@@ -21,6 +21,7 @@ def process_audio(file):
     audio = AudioSegment.from_mp3(io.BytesIO(file.read()))
     #24000Hzにダウンサンプリング
     processed_data = [0,3,0,4,-7,10,5,6,8,11]
+    # del audio
     return processed_data
 
 if __name__ == '__main__':
