@@ -7,12 +7,14 @@ app = Flask(__name__)
 
 @app.route('/process', methods=['POST'])
 def process():
+    print(request, flush=True)
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'})
     file = request.files['file']
     if file:
         result = process_audio(file)
         str_result = ', '.join(map(str, result))
+        print('hello', flush=True)
         return jsonify({'result': str_result})
     else:
         return jsonify({'error': 'Invalid file format'})
