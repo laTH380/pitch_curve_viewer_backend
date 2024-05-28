@@ -1,9 +1,16 @@
 # server.py
 from flask import Flask, request, jsonify
 from pydub import AudioSegment
+from pydub.playback import play
+import numpy as np
+from scipy.fft import fft
 import io
+import librosa
+from flask_cors import CORS
+import pprint
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route('/process', methods=['POST'])
 def process():
@@ -12,19 +19,51 @@ def process():
         return jsonify({'error': 'No file part'})
     file = request.files['file']
     if file:
-        result = process_audio(file)
+        result, times = process_audio(file)
         str_result = ', '.join(map(str, result))
-        print('hello', flush=True)
-        return jsonify({'result': str_result})
+        str_times = ', '.join(map(str, times))
+        print('success', flush=True)
+        return jsonify({'result': str_result,'times': str_times})
     else:
         return jsonify({'error': 'Invalid file format'})
 
 def process_audio(file):
+    # Read the MP3 file
     audio = AudioSegment.from_mp3(io.BytesIO(file.read()))
-    #24000Hzにダウンサンプリング
-    processed_data = [0,3,0,4,-7,10,5,6,8,11]
+    # Downsample to 24000Hz
+    target_rate = 24000
+    downsampled_audio = audio.set_frame_rate(target_rate)
     # del audio
-    return processed_data
+    # WAV形式のデータとして保持
+    wav_data = io.BytesIO()
+    downsampled_audio.export(wav_data, format="wav")
+    # play(downsampled_audio)
+    # Split into chunks of 240 samples (0.01 seconds at 24000Hz)
+    # samples = audiosegment_to_librosawav(downsampled_audio)
+    del downsampled_audio
+    y, sr = librosa.load(wav_data)
+    f0, voiced_flag, voiced_probs = librosa.pyin(y, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr = target_rate, frame_length = 2400, hop_length = 2400//4)#hop_lengthの影響で設定したフレーム数の情報を得られない
+    times = librosa.times_like(f0, sr = target_rate, hop_length = 2400/4)
+    return f0, times
+
+# 最も顕著なピッチを抽出する
+def get_pitch(pitches, magnitudes):
+    pitch = []
+    for t in range(pitches.shape[1]):
+        index = magnitudes[:, t].argmax()
+        pitch.append(pitches[index, t])
+    return pitch
+
+#pydub2librosa
+def audiosegment_to_librosawav(audiosegment):    
+    channel_sounds = audiosegment.split_to_mono()
+    samples = [s.get_array_of_samples() for s in channel_sounds]
+
+    fp_arr = np.array(samples).T.astype(np.float32)
+    fp_arr /= np.iinfo(samples[0].typecode).max
+    fp_arr = fp_arr.reshape(-1)
+
+    return fp_arr
 
 if __name__ == '__main__':
     app.run(debug=True)
