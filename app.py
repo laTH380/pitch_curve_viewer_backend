@@ -19,32 +19,33 @@ def process():
         return jsonify({'error': 'No file part'})
     file = request.files['file']
     if file:
-        result, times = process_audio(file)
+        result, times, length, maybe_result = process_audio(file)
         str_result = ', '.join(map(str, result))
         str_times = ', '.join(map(str, times))
+        str_maybe_result = ', '.join(map(str, maybe_result))
         print('success', flush=True)
-        return jsonify({'result': str_result,'times': str_times})
+        return jsonify({'result': str_result,'times': str_times,'length': str(length),'f0_full': str_maybe_result})
     else:
         return jsonify({'error': 'Invalid file format'})
 
 def process_audio(file):
     # Read the MP3 file
     audio = AudioSegment.from_mp3(io.BytesIO(file.read()))
+    ad_length = len(audio) /1000
     # Downsample to 24000Hz
     target_rate = 24000
     downsampled_audio = audio.set_frame_rate(target_rate)
-    # del audio
+    del audio
     # WAV形式のデータとして保持
     wav_data = io.BytesIO()
     downsampled_audio.export(wav_data, format="wav")
-    # play(downsampled_audio)
-    # Split into chunks of 240 samples (0.01 seconds at 24000Hz)
-    # samples = audiosegment_to_librosawav(downsampled_audio)
     del downsampled_audio
     y, sr = librosa.load(wav_data)
-    f0, voiced_flag, voiced_probs = librosa.pyin(y, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr = target_rate, frame_length = 2400, hop_length = 2400//4)#hop_lengthの影響で設定したフレーム数の情報を得られない
-    times = librosa.times_like(f0, sr = target_rate, hop_length = 2400/4)
-    return f0, times
+    f0, voiced_flag, voiced_probs = librosa.pyin(y, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr = target_rate, frame_length = 2400, hop_length = 2400//4)
+    f00, voiced_flag, voiced_probs = librosa.pyin(y, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr = target_rate, frame_length = 2400, hop_length = 2400//4, fill_na=None)#hop_lengthの影響で設定したフレーム数の情報を得られない
+    print(f00,flush=True)
+    times = librosa.times_like(f0, sr = target_rate, hop_length = 2400//4)
+    return f0, times, ad_length, f00
 
 # 最も顕著なピッチを抽出する
 def get_pitch(pitches, magnitudes):
