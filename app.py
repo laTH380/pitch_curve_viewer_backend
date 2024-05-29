@@ -1,7 +1,6 @@
 # server.py
 from flask import Flask, request, jsonify
 from pydub import AudioSegment
-from pydub.playback import play
 import numpy as np
 import io
 import librosa
