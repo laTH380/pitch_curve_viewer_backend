@@ -62,12 +62,13 @@ jobs:
         run: unzip release.zip
 
       
-      - name: Login to Azure
+      - name: Login to Azure using Managed Identity
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_19AF7535A5DF4CCA9FE1A7D58D91BA63 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_178C0C2E3401417E93B6ED7941EAFCCF }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_228D41DBCE2A43209210EC7544E45AA0 }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          auth-type: 'OIDC'
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v2
